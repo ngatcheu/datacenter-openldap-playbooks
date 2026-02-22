@@ -1,0 +1,16 @@
+---
+- name: Déployer le serveur OpenLDAP
+  hosts: ldap_servers
+  become: true
+  vars_files:
+    - "vars/variables.yml"
+    - "vars/secrets.yml"
+  tasks:
+    - name: Activer le dépôt EPEL (RedHat/CentOS 8+)
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+      when: ansible_os_family == "RedHat" and ansible_distribution_major_version | int >= 8
+
+    - ansible.builtin.import_role:
+        name: nsfabrice2009.config.openldap_ansible_role

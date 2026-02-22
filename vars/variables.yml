@@ -1,0 +1,23 @@
+---
+# -------------------------------------------------------
+# Variables OpenLDAP — Environnement Production
+# -------------------------------------------------------
+
+# --- Serveur LDAP ---
+ldap_basedn: dc=devsecops,dc=lan
+ldap_server_uri: ldap://192.168.1.119:389
+
+# --- Utilisateurs à créer (serveur) ---
+ldap_users:
+  fabrice.ngatcheu:
+    cn: Fabrice Ngatcheu
+    givenname: Fabrice
+    sn: Ngatcheu
+    mail: fabrice.ngatcheu@devsecops.lan
+    userpassword: "{{ vault_user_fabrice_ngatcheu_password }}"
+
+# --- Groupes à créer (serveur) ---
+ldap_groups:
+  - name: devops
+    members:
+      - fabrice.ngatcheu
