@@ -14,3 +14,71 @@
 
     - ansible.builtin.import_role:
         name: nsfabrice2009.config.openldap_ansible_role
+
+    # ─── Réinitialisation du mot de passe root OpenLDAP ───────────────────────
+
+    - name: Trouver dynamiquement le DN de la base de données
+      ansible.builtin.command:
+        cmd: >
+          ldapsearch -Y EXTERNAL -H ldapi:/// -b cn=config -LLL
+          (olcSuffix={{ ldap_basedn }}) dn
+      register: ldap_db_dn_raw
+      changed_when: false
+      tags: reset-rootpw
+
+    - name: Extraire le DN de la base de données
+      ansible.builtin.set_fact:
+        ldap_db_dn: "{{ ldap_db_dn_raw.stdout_lines | select('match', '^dn:') | list | first | replace('dn: ', '') | trim }}"
+      tags: reset-rootpw
+
+    - name: Afficher le DN utilisé pour la modification
+      ansible.builtin.debug:
+        msg: "DN base de données : {{ ldap_db_dn }}"
+      tags: reset-rootpw
+
+    - name: Générer le hash SSHA du mot de passe root
+      ansible.builtin.command:
+        cmd: "slappasswd -s {{ ldap_bind_pw }}"
+      register: ldap_rootpw_hash
+      changed_when: false
+      no_log: true
+      tags: reset-rootpw
+
+    - name: Écrire le fichier LDIF de réinitialisation
+      ansible.builtin.copy:
+        dest: /tmp/reset_rootpw.ldif
+        mode: '0600'
+        content: |
+          dn: {{ ldap_db_dn }}
+          changetype: modify
+          replace: olcRootPW
+          olcRootPW: {{ ldap_rootpw_hash.stdout }}
+      no_log: true
+      tags: reset-rootpw
+
+    - name: Appliquer le nouveau mot de passe root via SASL EXTERNAL
+      ansible.builtin.command:
+        cmd: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/reset_rootpw.ldif
+      changed_when: true
+      tags: reset-rootpw
+
+    - name: Supprimer le fichier LDIF temporaire
+      ansible.builtin.file:
+        path: /tmp/reset_rootpw.ldif
+        state: absent
+      tags: reset-rootpw
+
+    - name: Vérifier la connexion LDAP avec le nouveau mot de passe
+      ansible.builtin.command:
+        cmd: >
+          ldapsearch -x
+          -H {{ ldap_server_uri }}
+          -D "{{ ldap_bind_dn }}"
+          -w {{ ldap_bind_pw }}
+          -b "{{ ldap_basedn }}"
+          -s base
+      register: ldap_bind_test
+      changed_when: false
+      no_log: true
+      failed_when: ldap_bind_test.rc != 0
+      tags: reset-rootpw

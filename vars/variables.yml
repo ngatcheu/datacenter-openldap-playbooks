@@ -5,6 +5,7 @@
 
 # --- Serveur LDAP ---
 ldap_basedn: dc=devsecops,dc=lan
+ldap_bind_dn: dc=devsecops,dc=lan
 ldap_server_uri: ldap://192.168.1.119:389
 
 # --- Utilisateurs à créer (serveur) ---
@@ -19,5 +20,11 @@ ldap_users:
 # --- Groupes à créer (serveur) ---
 ldap_groups:
   - name: devops
+    members:
+      - fabrice.ngatcheu
+  - name: middleware
+    members:
+      - fabrice.ngatcheu
+  - name: usilo
     members:
       - fabrice.ngatcheu
