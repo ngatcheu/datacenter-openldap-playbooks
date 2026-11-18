@@ -16,7 +16,7 @@ datacenter-openldap-playbooks/
 ├── inventory.yml                   # Inventaire du serveur
 └── vars/
     ├── variables.yml               # Variables du déploiement
-    └── secrets.yml                 # Secrets (à chiffrer avec Vault)
+    └── secrets.yml                 # Secrets (chiffré avec ansible-vault)
 ```
 
 ---
@@ -52,9 +52,9 @@ make lint               # Lancer ansible-lint
 
 | Variable          | Valeur                        | Description                        |
 |-------------------|-------------------------------|------------------------------------|
-| `ldap_basedn`     | `dc=devsecops,dc=lan`         | Base DN de l'annuaire              |
-| `ldap_bind_dn`    | `dc=devsecops,dc=lan`         | DN de connexion (rootDN)           |
-| `ldap_server_uri` | `ldap://192.168.1.119:389`    | URI du serveur LDAP                |
+| `ldap_basedn`     | `dc=homelab,dc=local`         | Base DN de l'annuaire              |
+| `ldap_bind_dn`    | `cn=admin,dc=homelab,dc=local` | DN de connexion (rootDN, compte de service Rancher) |
+| `ldap_server_uri` | `ldap://192.168.1.120:389`    | URI du serveur LDAP                |
 
 ### Utilisateurs (`vars/variables.yml`)
 
@@ -81,7 +81,7 @@ make reset-rootpw
 ```
 
 Le playbook :
-1. Recherche dynamiquement le DN de la base (`olcSuffix=dc=devsecops,dc=lan`)
+1. Recherche dynamiquement le DN de la base (`olcSuffix=dc=homelab,dc=local`)
 2. Génère le hash SSHA via `slappasswd`
 3. Applique via `ldapmodify -Y EXTERNAL -H ldapi:///`
 4. Vérifie la connexion avec le nouveau mot de passe
@@ -101,10 +101,10 @@ ansible-vault edit vars/secrets.yml
 ansible-vault decrypt vars/secrets.yml
 ```
 
-Pour déployer avec le vault chiffré :
+Pour déployer (secrets.yml est chiffré) :
 
 ```bash
-ansible-playbook -i inventory.yml install_openldap.yml --ask-vault-pass
+make install   # la clé est lue dans ~/.ansible/openldap-vault.pass (ansible.cfg)
 ```
 
 ---
@@ -128,39 +128,39 @@ ansible ldap_servers -i inventory.yml -m shell -a "systemctl status slapd --no-p
 ### 2. Tester la connexion admin
 
 ```bash
-ldapsearch -x -H ldap://192.168.1.119:389 \
-  -D "dc=devsecops,dc=lan" \
+ldapsearch -x -H ldap://192.168.1.120:389 \
+  -D "cn=admin,dc=homelab,dc=local" \
   -w '<mot_de_passe>' \
-  -b "dc=devsecops,dc=lan" -s base
+  -b "dc=homelab,dc=local" -s base
 ```
 
 ### 3. Lister tous les utilisateurs
 
 ```bash
-ldapsearch -x -H ldap://192.168.1.119:389 \
-  -D "dc=devsecops,dc=lan" -w '<mot_de_passe>' \
-  -b "dc=devsecops,dc=lan" "(objectClass=inetOrgPerson)" cn mail
+ldapsearch -x -H ldap://192.168.1.120:389 \
+  -D "cn=admin,dc=homelab,dc=local" -w '<mot_de_passe>' \
+  -b "dc=homelab,dc=local" "(objectClass=inetOrgPerson)" cn mail
 ```
 
 ### 4. Lister les groupes
 
 ```bash
-ldapsearch -x -H ldap://192.168.1.119:389 \
-  -D "dc=devsecops,dc=lan" -w '<mot_de_passe>' \
-  -b "dc=devsecops,dc=lan" "(objectClass=groupOfUniqueNames)"
+ldapsearch -x -H ldap://192.168.1.120:389 \
+  -D "cn=admin,dc=homelab,dc=local" -w '<mot_de_passe>' \
+  -b "dc=homelab,dc=local" "(objectClass=groupOfNames)"
 ```
 
 ### 5. Tester l'authentification d'un utilisateur
 
 ```bash
-ldapwhoami -x -H ldap://192.168.1.119:389 \
-  -D "uid=fabrice.ngatcheu,ou=people,dc=devsecops,dc=lan" \
+ldapwhoami -x -H ldap://192.168.1.120:389 \
+  -D "uid=fabrice.ngatcheu,ou=people,dc=homelab,dc=local" \
   -w '<mot_de_passe_utilisateur>'
 ```
 
 Résultat attendu :
 ```
-dn:uid=fabrice.ngatcheu,ou=people,dc=devsecops,dc=lan
+dn:uid=fabrice.ngatcheu,ou=people,dc=homelab,dc=local
 ```
 
 ### 6. Vérifier les bases cn=config
@@ -176,7 +176,7 @@ ansible ldap_servers -i inventory.yml -m shell \
 
 | Champ          | Valeur                     |
 |----------------|----------------------------|
-| Host           | `ldap://192.168.1.119:389` |
-| Bind DN        | `dc=devsecops,dc=lan`      |
+| Host           | `ldap://192.168.1.120:389` |
+| Bind DN        | `cn=admin,dc=homelab,dc=local` |
 | Bind Password  | *(voir `ldap_bind_pw`)*    |
-| Base DN        | `dc=devsecops,dc=lan`      |
+| Base DN        | `dc=homelab,dc=local`      |

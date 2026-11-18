@@ -7,5 +7,6 @@ all:
   children:
     ldap_servers:
       hosts:
-        ldap-server-1:
-          ansible_host: 192.168.1.119
+        # VM terragrunt_cluster_kubernetes/live/production/standalone (partagée avec Floci)
+        standalone-1:
+          ansible_host: 192.168.1.120

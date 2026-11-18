@@ -6,6 +6,10 @@ PLAYBOOK   := install_openldap.yml
 COLLECTION := collections/requirements.yml
 SECRETS    := vars/secrets.yml
 
+# Sous WSL, /mnt/c est « world writable » : Ansible y ignore le ansible.cfg du
+# répertoire courant (et donc vault_password_file). Un chemin explicite est pris en compte.
+export ANSIBLE_CONFIG := $(CURDIR)/ansible.cfg
+
 help:
 	@echo ""
 	@echo "Usage: make <target>"

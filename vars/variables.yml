@@ -1,12 +1,20 @@
 ---
 # -------------------------------------------------------
 # Variables OpenLDAP — Environnement Production
+# Annuaire de l'authentification Rancher
+# (datacenter-rancher-configuration/__modules/rancher-configuration/ldap.tf)
 # -------------------------------------------------------
 
 # --- Serveur LDAP ---
-ldap_basedn: dc=devsecops,dc=lan
-ldap_bind_dn: dc=devsecops,dc=lan
-ldap_server_uri: ldap://192.168.1.119:389
+ldap_basedn: dc=homelab,dc=local
+# Compte administrateur = compte de service de Rancher (service_account_distinguished_name)
+ldap_bind_dn: cn=admin,dc=homelab,dc=local
+ldap_root_dn: "{{ ldap_bind_dn }}"
+ldap_server_uri: ldap://192.168.1.120:389
+
+# Groupes au format attendu par Rancher (group_object_class / group_member_mapping_attribute)
+ldap_group_object_class: groupOfNames
+ldap_group_member_attribute: member
 
 # --- Utilisateurs à créer (serveur) ---
 ldap_users:
@@ -14,10 +22,10 @@ ldap_users:
     cn: Fabrice Ngatcheu
     givenname: Fabrice
     sn: Ngatcheu
-    mail: fabrice.ngatcheu@devsecops.lan
+    mail: fabrice.ngatcheu@homelab.local
     userpassword: "{{ vault_user_fabrice_ngatcheu_password }}"
 
-# --- Groupes à créer (serveur) ---
+# --- Groupes à créer (serveur) — rôles Rancher : devops/middleware = admin, usilo = user ---
 ldap_groups:
   - name: devops
     members:
